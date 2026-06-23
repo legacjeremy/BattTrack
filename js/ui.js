@@ -23,10 +23,10 @@ export function renderDashboard(items, settings, archivedCount, handlers) {
   app.innerHTML = `
     <section class="card"><h2>Tableau de bord</h2><div class="status-row">
       <div><span class="badge badge-gray">🔋 Actives : ${active.length}</span></div>
-      <div><span class="badge badge-red">🔴 À recharger : ${red.length}</span></div>
-      <div><span class="badge badge-orange">🟠 À surveiller : ${orange.length}</span></div>
-      <div><span class="badge badge-green">🟢 OK : ${green.length}</span></div>
-      <div><span class="badge badge-gray">⚪ Non initialisée : ${uninit.length}</span></div>
+      <div><span class="badge badge-red"><img class="status-icon" src="assets/icons/status/critical.svg" alt=""> À recharger : ${red.length}</span></div>
+      <div><span class="badge badge-orange"><img class="status-icon" src="assets/icons/status/warning.svg" alt=""> À surveiller : ${orange.length}</span></div>
+      <div><span class="badge badge-green"><img class="status-icon" src="assets/icons/status/ok.svg" alt=""> OK : ${green.length}</span></div>
+      <div><span class="badge badge-gray"><img class="status-icon" src="assets/icons/status/unknown.svg" alt=""> Non initialisée : ${uninit.length}</span></div>
       <div><span class="badge badge-gray">📦 Archivées : ${archivedCount}</span></div>
     </div></section>
     <section class="card"><h3>Batteries</h3>${renderSortControl("dashboard-sort", settings.dashboardSort)}${active.length === 0 ? `<p class="empty-state">Aucune batterie active.</p>` : renderBatteryList(active)}</section>`;
@@ -162,7 +162,7 @@ function formatBatteryMeta(status) { if (!status.lastMeasurementDate) return "�
 function renderMeasurementHistory(measurementsWithRates) { const visible = measurementsWithRates.slice(-5).reverse(); return `${visible.map(m => `<div class="history-item" data-measurement-id="${m.id}"><span>${m.date}</span><strong>${m.levelPercent} %</strong><span class="history-rate">${m.rateLabel}</span></div>`).join("")}${measurementsWithRates.length > 5 ? `<p class="helper-text">5 dernières mesures affichées.</p>` : ""}`; }
 function renderLedPreviewHtml(ledCount, behavior, sliderPosition) { const state = behavior === LED_BEHAVIORS.ADVANCED ? buildLedAdvancedState(ledCount, sliderPosition) : buildLedSimpleState(ledCount, sliderPosition); const leds = []; for (let i=0;i<state.solid;i++) leds.push(`<span class="led led-on"></span>`); for (let i=0;i<state.blinking;i++) leds.push(`<span class="led led-blink"></span>`); for (let i=0;i<state.off;i++) leds.push(`<span class="led led-off"></span>`); return leds.join(""); }
 function inputTypeFromBattery(battery) { if (!battery) return BATTERY_INPUT_TYPES.PERCENTAGE; if (battery.inputType) return battery.inputType; if (battery.ledConfig?.behavior === LED_BEHAVIORS.ADVANCED) return BATTERY_INPUT_TYPES.LED_ADVANCED; if (battery.ledConfig) return BATTERY_INPUT_TYPES.LED_SIMPLE; return BATTERY_INPUT_TYPES.PERCENTAGE; }
-function formatStatus(status) { switch(status) { case STATUS.RED: return `<span class="badge badge-red">🔴 À recharger</span>`; case STATUS.ORANGE: return `<span class="badge badge-orange">🟠 À surveiller</span>`; case STATUS.GREEN: return `<span class="badge badge-green">🟢 OK</span>`; default: return `<span class="badge badge-gray">⚪ Non initialisée</span>`; } }
+function formatStatus(status) { switch(status) { case STATUS.RED: return `<span class="badge badge-red"><img class="status-icon" src="assets/icons/status/critical.svg" alt=""> À recharger</span>`; case STATUS.ORANGE: return `<span class="badge badge-orange"><img class="status-icon" src="assets/icons/status/warning.svg" alt=""> À surveiller</span>`; case STATUS.GREEN: return `<span class="badge badge-green"><img class="status-icon" src="assets/icons/status/ok.svg" alt=""> OK</span>`; default: return `<span class="badge badge-gray"><img class="status-icon" src="assets/icons/status/unknown.svg" alt=""> Non initialisée</span>`; } }
 function statusClass(status) { switch(status) { case STATUS.RED: return "value-red"; case STATUS.ORANGE: return "value-orange"; case STATUS.GREEN: return "value-green"; default: return "value-gray"; } }
 function openModal(content) { modalRoot.innerHTML = `<div class="modal-backdrop"><div class="modal">${content}</div></div>`; }
 function escapeHtml(value) { return String(value).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;"); }

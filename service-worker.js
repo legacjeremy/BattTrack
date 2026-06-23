@@ -1,9 +1,10 @@
-const CACHE_NAME = "battery-reminder-v0-6";
+const CACHE_NAME = "battery-reminder-v0-7";
 
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.json",
+  "./css/tokens.css",
   "./css/style.css",
   "./js/app.js",
   "./js/battery.js",
@@ -18,6 +19,20 @@ const APP_SHELL = [
   "./assets/apple-touch-icon.png",
   "./assets/icon-192.png",
   "./assets/icon-512.png"
+  "./assets/logo.svg",
+  "./assets/icons/navigation/home.svg",
+  "./assets/icons/navigation/batteries.svg",
+  "./assets/icons/navigation/settings.svg",
+  "./assets/icons/status/ok.svg",
+  "./assets/icons/status/warning.svg",
+  "./assets/icons/status/critical.svg",
+  "./assets/icons/status/unknown.svg",
+  "./assets/icons/actions/add.svg",
+  "./assets/icons/actions/recharge.svg",
+  "./assets/icons/actions/edit.svg",
+  "./assets/icons/actions/archive.svg",
+  "./assets/icons/actions/restore.svg",
+  "./assets/icons/actions/delete.svg",
 ];
 
 self.addEventListener("install", (event) => {

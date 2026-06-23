@@ -4,7 +4,17 @@ Application web statique/PWA pour aider à éviter les décharges profondes des 
 
 ## Version
 
-v0.6.0
+v0.7.0
+
+
+## Changements v0.7.0
+
+- Intégration des assets graphiques validés.
+- Ajout du logo SVG dans l'en-tête.
+- Ajout des icônes SVG de navigation, d'actions et de statuts.
+- Ajout des tokens CSS issus du design system.
+- Mise à jour des icônes PWA.
+- Mise à jour du cache Service Worker.
 
 ## Fonctionnalités implémentées
 

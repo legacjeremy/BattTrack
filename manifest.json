@@ -8,8 +8,11 @@
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f6f7f9",
-  "theme_color": "#111827",
-  "categories": ["utilities", "productivity"],
+  "theme_color": "#2F7DF6",
+  "categories": [
+    "utilities",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "assets/icon-192.png",
