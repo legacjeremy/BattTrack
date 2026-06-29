@@ -64,6 +64,39 @@ function renderArchivesView() {
 
 function openSettingsView() {
   openSettingsModal(state.settings, { onSave: handleSettingsSave, onCheckUpdate: handleCheckUpdate, onExportJson: handleExportJson, onImportJson: handleImportFile });
+  addClearCacheButtonToSettings();
+}
+
+function addClearCacheButtonToSettings() {
+  const checkButton = document.querySelector("#check-update-button");
+  if (!checkButton || document.querySelector("#clear-cache-button")) return;
+
+  checkButton.insertAdjacentHTML("afterend", `
+    <button id="clear-cache-button" class="button secondary-button" type="button">🧹 Vider le cache et recharger</button>
+    <p class="helper-text">Recharge les fichiers de BattTrack sans supprimer vos batteries ni vos mesures.</p>
+  `);
+
+  document.querySelector("#clear-cache-button").onclick = handleClearAppCache;
+}
+
+async function handleClearAppCache() {
+  if (!confirm("Vider le cache de l'application et recharger ?\n\nVos batteries et vos mesures seront conservées.")) return;
+
+  try {
+    if ("caches" in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(cacheName => caches.delete(cacheName)));
+    }
+
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map(registration => registration.update()));
+    }
+  } catch (error) {
+    console.warn("Impossible de vider entièrement le cache", error);
+  }
+
+  window.location.reload();
 }
 
 async function openBatteryDetails(id) {
