@@ -1,0 +1,44 @@
+.app-header {
+  background: color-mix(in srgb, var(--card) 96%, transparent);
+}
+
+.header-icon-button {
+  color: var(--text);
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.header-icon-button:active {
+  transform: scale(0.96);
+}
+
+.nav-icon {
+  width: 28px;
+  height: 28px;
+  opacity: 1;
+}
+
+[data-theme="dark"] .nav-icon {
+  filter: brightness(0) invert(1) drop-shadow(0 0 2px rgba(255, 255, 255, 0.35));
+}
+
+[data-theme="dark"] .header-icon-button {
+  color: #FFFFFF;
+}
+
+[data-theme="dark"] .header-icon-button:hover,
+[data-theme="dark"] .header-icon-button:focus-visible,
+[data-theme="dark"] .header-icon-button:active {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+[data-theme="light"] .nav-icon {
+  filter: brightness(0) saturate(100%);
+}
+
+[data-theme="light"] .header-icon-button:hover,
+[data-theme="light"] .header-icon-button:focus-visible,
+[data-theme="light"] .header-icon-button:active {
+  background: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.12);
+}
