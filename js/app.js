@@ -16,6 +16,7 @@ async function main() {
   await initDb();
   await reloadState();
   applyTheme(state.settings.theme);
+  await requestInitialNotificationPermission();
   renderDashboardView();
   await checkCriticalNotifications();
   document.querySelector("#floating-action-button").addEventListener("click", handleFabClick);
@@ -63,24 +64,30 @@ function renderArchivesView() {
 }
 
 function openSettingsView() {
-  openSettingsModal(state.settings, { onSave: handleSettingsSave, onCheckUpdate: handleCheckUpdate, onExportJson: handleExportJson, onImportJson: handleImportFile });
-  addClearCacheButtonToSettings();
+  openSettingsModal(state.settings, { onSave: handleSettingsSave, onCheckUpdate: handleClearAppCache, onExportJson: handleExportJson, onImportJson: handleImportFile });
+  enhanceSettingsModal();
 }
 
-function addClearCacheButtonToSettings() {
-  const checkButton = document.querySelector("#check-update-button");
-  if (!checkButton || document.querySelector("#clear-cache-button")) return;
+function enhanceSettingsModal() {
+  const refreshButton = document.querySelector("#check-update-button");
+  if (refreshButton) {
+    refreshButton.textContent = "🔄 Actualiser l'application";
+    refreshButton.onclick = handleClearAppCache;
+    if (!document.querySelector("#refresh-app-helper")) {
+      refreshButton.insertAdjacentHTML("afterend", `<p id="refresh-app-helper" class="helper-text">Recharge les fichiers de BattTrack sans supprimer vos batteries ni vos mesures.</p>`);
+    }
+  }
 
-  checkButton.insertAdjacentHTML("afterend", `
-    <button id="clear-cache-button" class="button secondary-button" type="button">🧹 Vider le cache et recharger</button>
-    <p class="helper-text">Recharge les fichiers de BattTrack sans supprimer vos batteries ni vos mesures.</p>
-  `);
+  const exportButton = document.querySelector("#export-json");
+  if (exportButton) exportButton.textContent = "💾 Sauvegarder mes données";
 
-  document.querySelector("#clear-cache-button").onclick = handleClearAppCache;
+  const importInput = document.querySelector("#import-json-input");
+  const importLabel = importInput?.closest("label");
+  if (importLabel?.childNodes?.[0]) importLabel.childNodes[0].nodeValue = "📥 Restaurer une sauvegarde";
 }
 
 async function handleClearAppCache() {
-  if (!confirm("Vider le cache de l'application et recharger ?\n\nVos batteries et vos mesures seront conservées.")) return;
+  if (!confirm("Actualiser l'application ?\n\nLes fichiers de BattTrack seront rechargés. Vos batteries et vos mesures seront conservées.")) return;
 
   try {
     if ("caches" in window) {
@@ -99,6 +106,28 @@ async function handleClearAppCache() {
   window.location.reload();
 }
 
+async function requestInitialNotificationPermission() {
+  if (!state.settings || state.settings.notificationPromptAskedAt) return;
+  if (!("Notification" in window)) {
+    state.settings = updateSettings(state.settings, { notificationPromptAskedAt: new Date().toISOString(), notificationsEnabled: false });
+    await saveSettings(state.settings);
+    return;
+  }
+  if (Notification.permission !== "default") {
+    state.settings = updateSettings(state.settings, { notificationPromptAskedAt: new Date().toISOString(), notificationsEnabled: Notification.permission === "granted" });
+    await saveSettings(state.settings);
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+  state.settings = updateSettings(state.settings, {
+    notificationPromptAskedAt: new Date().toISOString(),
+    notificationsEnabled: permission === "granted",
+    notifyOnCritical: permission === "granted"
+  });
+  await saveSettings(state.settings);
+}
+
 async function openBatteryDetails(id) {
   const battery = state.batteries.find(b => b.id === id);
   const measurements = await getMeasurementsByBatteryId(id);
@@ -107,6 +136,63 @@ async function openBatteryDetails(id) {
   state.currentBatteryId = id;
   setFabVisible(true);
   renderBatteryDetails(battery, measurements, status, state.settings, { onEditMeasurement: measurementId => openEditMeasurement(battery, measurements.find(m => m.id === measurementId)) });
+  enhanceBatteryMiniChart(measurements, state.settings);
+}
+
+function enhanceBatteryMiniChart(measurements, settings) {
+  const currentChart = document.querySelector(".mini-chart");
+  if (!currentChart) return;
+
+  const now = new Date();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const minDate = new Date(now.getTime() - 28 * dayMs);
+  const points = [...measurements]
+    .filter(m => typeof m.levelPercent === "number")
+    .map(m => ({ ...m, dateObject: new Date(m.measuredAt ?? `${m.date}T00:00`) }))
+    .filter(m => m.dateObject >= minDate && m.dateObject <= now)
+    .sort((a, b) => a.dateObject - b.dateObject);
+
+  if (points.length < 2) {
+    currentChart.outerHTML = `<p class="helper-text">Mini graphique disponible après au moins 2 mesures sur les 28 derniers jours.</p>`;
+    return;
+  }
+
+  const width = 340;
+  const height = 135;
+  const labelW = 38;
+  const bottomH = 24;
+  const padding = 8;
+  const chartX = labelW;
+  const chartY = padding;
+  const chartW = width - labelW - padding;
+  const chartH = height - bottomH - padding * 2;
+  const yFor = level => chartY + ((100 - level) / 100) * chartH;
+  const xFor = date => chartX + ((date - minDate) / (28 * dayMs)) * chartW;
+  const colorFor = level => {
+    if (level <= settings.criticalThresholdPercent) return "var(--danger)";
+    if (level <= settings.alertThresholdPercent) return "var(--warning)";
+    return "var(--success)";
+  };
+  const labelFor = point => point.dateObject.toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const coords = points.map(point => ({ x: xFor(point.dateObject), y: yFor(point.levelPercent), level: point.levelPercent, label: labelFor(point) }));
+  const segments = [];
+  for (let i = 1; i < coords.length; i++) {
+    const a = coords[i - 1];
+    const b = coords[i];
+    segments.push(`<line class="mini-chart-segment" x1="${a.x.toFixed(1)}" y1="${a.y.toFixed(1)}" x2="${b.x.toFixed(1)}" y2="${b.y.toFixed(1)}" stroke="${colorFor(b.level)}"><title>${b.label} - ${b.level} %</title></line>`);
+  }
+
+  currentChart.outerHTML = `
+    <svg class="mini-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Évolution du niveau de batterie sur 28 jours">
+      ${[100, 50, 0].map(level => `<text class="mini-chart-label" x="0" y="${(yFor(level) + 5).toFixed(1)}">${level} %</text><line class="mini-chart-grid" x1="${chartX}" y1="${yFor(level).toFixed(1)}" x2="${width - padding}" y2="${yFor(level).toFixed(1)}"/>`).join("")}
+      ${[28, 21, 14, 7].map(days => {
+        const x = xFor(new Date(now.getTime() - days * dayMs));
+        return `<line class="mini-chart-grid" x1="${x.toFixed(1)}" y1="${chartY}" x2="${x.toFixed(1)}" y2="${(chartY + chartH).toFixed(1)}"/><text class="mini-chart-label" x="${x.toFixed(1)}" y="${height - 6}" text-anchor="middle">J-${days}</text>`;
+      }).join("")}
+      ${segments.join("")}
+      ${coords.map(p => `<circle class="mini-chart-dot" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${colorFor(p.level)}"><title>${p.label} - ${p.level} %</title></circle>`).join("")}
+    </svg>
+  `;
 }
 
 async function handleDashboardSort(sort) {
@@ -139,11 +225,11 @@ async function handleSettingsSave(updates) {
 }
 
 async function handleExportJson() {
-  downloadJsonBackup();
+  await downloadJsonBackup();
   state.settings = updateSettings(state.settings, { lastExportAt: new Date().toISOString() });
   await saveSettings(state.settings);
   await reloadState();
-  if (state.view === VIEWS.DASHBOARD) renderDashboardView();
+  openSettingsView();
 }
 
 async function handleCheckUpdate() {
@@ -294,12 +380,13 @@ async function handleCreateMeasurement(battery, data) {
 
 async function handleImportFile(file) {
   if (!file) return;
-  if (!confirm("Importer ce fichier ? Les données actuelles seront remplacées.")) return;
+  if (!confirm("Restaurer cette sauvegarde ? Les données actuelles seront remplacées.")) return;
   const data = await readJsonBackup(file);
   await replaceWithImportedData(data);
   await reloadState();
   closeModal();
   renderDashboardView();
+  alert("Sauvegarde restaurée. Les notifications locales doivent être réactivées sur cet appareil si vous souhaitez les utiliser.");
   await checkCriticalNotifications();
 }
 
